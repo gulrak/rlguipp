@@ -8,6 +8,8 @@
 // Copyright (c) 2019-2022 raylib technologies (@raylibtech)                    //
 //                                                                              //
 //////////////////////////////////////////////////////////////////////////////////
+#pragma once
+
 #define RAYGUI_CUSTOM_ICONS  // Custom icons set required
 //----------------------------------------------------------------------------------
 // Defines and Macros
