@@ -1,8 +1,6 @@
 //---------------------------------------------------------------------------------------
-// src/rlguippimpl.cpp
-//---------------------------------------------------------------------------------------
 //
-// Copyright (c) 2023, Steffen Schümann <s.schuemann@pobox.com>
+// Copyright (c) 2026, Steffen Schümann <s.schuemann@pobox.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +21,4 @@
 // SOFTWARE.
 //
 //---------------------------------------------------------------------------------------
-#include <raylib.h>
-#define RLGUIPP_IMPLEMENTATION
-#include "icons.h"  // Custom icons set provided, generated with rGuiIcons tool
-
-#include <rlguipp/rlguipp4.hpp>
+#include <ghc/fs_impl.hpp>
