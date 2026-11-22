@@ -27,6 +27,7 @@ extern "C" const char* glfwGetKeyName(int key, int scancode);
 #include <cmath>
 #include <cstring>
 #include <deque>
+#include <optional>
 #include <stack>
 #include <string>
 #include <unordered_map>
@@ -557,6 +558,7 @@ static std::deque<TabViewContext> g_tabViewStack;
 static std::vector<Id> g_idStack;
 static std::stack<Rectangle> g_clippingStack;
 static std::vector<RenderTexture*> g_renderTargets;
+static std::optional<bool> g_macLike;  // set by SetMacLike(), else the platform decides
 
 namespace detail {
 
@@ -594,6 +596,8 @@ void reportError(const char* message)
 
 bool isMacLike()
 {
+    if (g_macLike)
+        return *g_macLike;
 #ifdef __APPLE__
     return true;
 #elif defined(__EMSCRIPTEN__)
@@ -3183,6 +3187,11 @@ Vector2 GetTextSize(const char* text)
 bool IsMacLike()
 {
     return detail::isMacLike();
+}
+
+void SetMacLike(bool macLike)
+{
+    g_macLike = macLike;
 }
 
 std::string ShortcutText(const std::string& key, int modifiers)

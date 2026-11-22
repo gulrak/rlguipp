@@ -30,7 +30,7 @@
 //   - Floating PopupMenu, modal WindowBox, and inline Popup
 //
 // Golden image tests:
-//   rlguipp_showcase --golden <approved-dir> --out <output-dir> [--update]
+//   rlguipp_showcase --golden <approved-dir> --out <output-dir> [--tolerance <n>] [--update]
 // renders a fixed set of tabs, menus and dialogs in a hidden window and compares them
 // pixel by pixel with the approved PNGs, see README.md "Tests".
 //---------------------------------------------------------------------------------------
@@ -50,6 +50,7 @@
 #include <cmath>
 #include <ctime>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <functional>
 #include <optional>
@@ -129,8 +130,11 @@ public:
         : gui::Application("rlGuipp Showcase", goldenMode ? Config{800, 600, 1, 60, FLAG_WINDOW_HIDDEN} : Config{800, 600, 2})
         , _goldenMode(goldenMode)
     {
-        if (_goldenMode)
+        if (_goldenMode) {
             SetMousePosition(-10000, -10000);
+            // the approved images show macOS shortcut texts, on every platform
+            gui::SetMacLike(true);
+        }
         _styleManager.addTheme("Warm",  30.0f, 90, false);
         _styleManager.addTheme("Light", 200.0f, 90, true);
         _styleManager.setTheme(0);
@@ -958,7 +962,8 @@ public:
     // Golden image tests
     // -----------------------------------------------------------------------
 
-    int runGoldenTests(const fs::path& approvedDir, const fs::path& outDir, bool updateApproved)
+    // A pixel only counts as different if a channel differs by more than tolerance
+    int runGoldenTests(const fs::path& approvedDir, const fs::path& outDir, bool updateApproved, int tolerance = 0)
     {
         fs::create_directories(outDir);
         if (updateApproved)
@@ -1046,7 +1051,7 @@ public:
                 continue;
             }
             auto diff = (outDir / (std::string(gc.name) + "-diff.png")).string();
-            auto result = compareImages(actual, approved, diff);
+            auto result = compareImages(actual, approved, diff, tolerance);
             if (result.empty()) {
                 std::printf("ok      %s\n", gc.name);
             }
@@ -1091,9 +1096,12 @@ private:
         }
     }
 
-    // Returns an empty string if both images are equal, otherwise what differs; then a diff image is written
-    static std::string compareImages(const std::string& actualPath, const std::string& approvedPath, const std::string& diffPath)
+    // Returns an empty string if both images are equal, otherwise what differs; then a diff image is written.
+    // A pixel is equal if no channel differs by more than tolerance (software renderers differ by one or two
+    // steps in gradients and blending).
+    static std::string compareImages(const std::string& actualPath, const std::string& approvedPath, const std::string& diffPath, int tolerance)
     {
+        auto channelDiffers = [tolerance](unsigned char x, unsigned char y) { return std::abs(int(x) - int(y)) > tolerance; };
         if (!fs::exists(approvedPath))
             return "no approved image, run with --update to create it";
         Image actual = LoadImage(actualPath.c_str());
@@ -1108,7 +1116,7 @@ private:
             std::vector<Color> diff(actual.width * actual.height);
             int differences = 0;
             for (size_t i = 0; i < diff.size(); ++i) {
-                if (a[i].r != b[i].r || a[i].g != b[i].g || a[i].b != b[i].b || a[i].a != b[i].a) {
+                if (channelDiffers(a[i].r, b[i].r) || channelDiffers(a[i].g, b[i].g) || channelDiffers(a[i].b, b[i].b) || channelDiffers(a[i].a, b[i].a)) {
                     diff[i] = Color{255, 0, 0, 255};
                     ++differences;
                 }
@@ -1213,23 +1221,26 @@ int main(int argc, char* argv[])
     std::optional<fs::path> approvedDir;
     fs::path outDir = "golden-out";
     bool update = false;
+    int tolerance = 0;
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
         if (arg == "--golden" && i + 1 < argc)
             approvedDir = fs::absolute(argv[++i]);
         else if (arg == "--out" && i + 1 < argc)
             outDir = argv[++i];
+        else if (arg == "--tolerance" && i + 1 < argc)
+            tolerance = std::clamp(std::atoi(argv[++i]), 0, 255);
         else if (arg == "--update")
             update = true;
         else {
-            std::fprintf(stderr, "usage: %s [--golden <approved-dir> [--out <output-dir>] [--update]]\n", argv[0]);
+            std::fprintf(stderr, "usage: %s [--golden <approved-dir> [--out <output-dir>] [--tolerance <n>] [--update]]\n", argv[0]);
             return 2;
         }
     }
     if (approvedDir) {
         SetTraceLogLevel(LOG_WARNING);
         ShowcaseApp app(true);
-        return app.runGoldenTests(*approvedDir, fs::absolute(outDir), update);
+        return app.runGoldenTests(*approvedDir, fs::absolute(outDir), update, tolerance);
     }
     ShowcaseApp app;
     while (!app.shouldClose())

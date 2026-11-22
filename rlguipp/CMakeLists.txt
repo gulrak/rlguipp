@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 3.16)
-project(RlGuiPp)
-
-set(RLGUIPP_RAYLIB_TARGET raylib_static CACHE STRING "Name of the raylib target rlguipp links against")
+if(TARGET raylib_static)
+    set(_rlguippRaylibDefault raylib_static)
+else()
+    set(_rlguippRaylibDefault raylib)
+endif()
+set(RLGUIPP_RAYLIB_TARGET ${_rlguippRaylibDefault} CACHE STRING "Name of the raylib target rlguipp links against")
 
 add_library(rlguipp STATIC
     rlguipp.cpp rlguipp.hpp
@@ -21,9 +23,11 @@ add_library(rlguipp STATIC
     raygui4.5.h icons.h
     syshelper.cpp
     syshelper.hpp)
-target_include_directories(rlguipp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+add_library(rlguipp::rlguipp ALIAS rlguipp)
+target_include_directories(rlguipp PUBLIC ${PROJECT_SOURCE_DIR})
+# ghc/utf8.hpp is only used by the implementation
+target_include_directories(rlguipp PRIVATE ${PROJECT_SOURCE_DIR}/external)
 target_link_libraries(rlguipp PUBLIC ${RLGUIPP_RAYLIB_TARGET} ghc_filesystem)
-
-add_subdirectory(test)
-add_subdirectory(tools)
-add_subdirectory(examples)
+if(RLGUIPP_GHC_FS_IMPL)
+    target_sources(rlguipp PRIVATE ${PROJECT_SOURCE_DIR}/test/fs_impl.cpp)
+endif()

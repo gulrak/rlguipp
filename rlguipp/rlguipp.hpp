@@ -230,6 +230,7 @@ RLGUIPP_API const char* IconText(int icon, const char* text);
 
 enum ShortcutModifier { SHORTCUT_SYS = 1, SHORTCUT_SHIFT = 2, SHORTCUT_ALT = 4, SHORTCUT_CTRL = 8 };
 RLGUIPP_API bool IsMacLike();  // macOS, or a browser on a Mac in the web build, the system key is Cmd there, else Ctrl
+RLGUIPP_API void SetMacLike(bool macLike);  // Overrides the platform detection of IsMacLike() (shortcut texts and the system key), e.g. for screenshots that look the same on every platform
 // The text of a shortcut for a menu or tooltip: on macOS the modifier symbols in their order before the key ("⌥⇧⌘G", they are
 // in the default font), elsewhere "Ctrl+Alt+Shift+G" (SHORTCUT_SYS is Ctrl there, SHORTCUT_CTRL is Ctrl everywhere)
 RLGUIPP_API std::string ShortcutText(const std::string& key, int modifiers = SHORTCUT_SYS);

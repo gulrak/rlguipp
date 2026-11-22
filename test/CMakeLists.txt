@@ -1,3 +1,6 @@
+# stylemanager.hpp is included with <> by the tests
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 if(NOT EMSCRIPTEN)
     add_executable(rlguipp_test rlguipp_test.cpp stylemanager.cpp stylemanager.hpp fs_impl.cpp)
     target_link_libraries(rlguipp_test PUBLIC rlguipp fmt::fmt)
