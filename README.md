@@ -2,6 +2,9 @@
 
 `rlguipp` is an immediate-mode GUI layout wrapper built on top of [raygui](https://github.com/raysan5/raygui). It adds hierarchical layout containers, column grids, tab views, scroll panels, popups and window boxes, popup menus and a file dialog on top of raygui's flat widget API. All symbols live in the `gui::` namespace.
 
+> NOTE: This project exists mainly to allow me to use the wrapper in multiple projects. I would not recommend it as
+> a stable choice for your own project, unless you are okay with API changes and little documentation. 
+
 ---
 
 ## Table of Contents
