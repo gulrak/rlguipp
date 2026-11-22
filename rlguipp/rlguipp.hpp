@@ -52,8 +52,8 @@
 #pragma once
 
 // rlGuipp version in decimal (major * 10000 + minor * 100 + patch)
-#define RLGUIPP_VERSION 300L
-#define RLGUIPP_VERSION_STRING "0.3.0"
+#define RLGUIPP_VERSION 500L
+#define RLGUIPP_VERSION_STRING "0.5.0"
 
 #define RLGUIPP_API
 
@@ -380,7 +380,9 @@ inline Item Disabled(Item item) {
 RLGUIPP_API void Open(Vector2 position, const Menu& menu);  // Open the menu at the given position (like GetMousePosition(), also in a popup or window), the menu is copied, so it can be changed or destroyed while open
 RLGUIPP_API void Close();                                   // Close all open menus
 RLGUIPP_API bool IsOpen();                                  // Check if any menu is open
-RLGUIPP_API bool IsMenuOpen(const Menu& menu);              // Check if the menu that was opened from `menu` is open
+RLGUIPP_API bool IsMenuOpen(const Menu& menu);              // Check if the menu that was opened from `menu` is open (compares the address of `menu`)
+RLGUIPP_API void Open(Vector2 position, const Menu& menu, Id owner); // Like Open(), but the menu is identified by the owner id (e.g. from GetId()), for menus built anew every frame
+RLGUIPP_API bool IsOpenedBy(Id owner);                      // Check if the open menu was opened with that owner id (never for 0)
 RLGUIPP_API void SetMenuStyle(const Style& style);          // Set the style used for drawing popup menus
 RLGUIPP_API const Style& GetMenuStyle();                    // Get the style used for drawing popup menus
 

@@ -112,8 +112,8 @@ class System {
 public:
     Style style;
 
-    // Open a popup menu at the given position, the menu is copied
-    void open(Vector2 position, const Menu& menu);
+    // Open a popup menu at the given position, the menu is copied, owner (0 for none) identifies it for isOpenedBy()
+    void open(Vector2 position, const Menu& menu, Id owner = 0);
 
     // Close all menus
     void close();
@@ -121,8 +121,12 @@ public:
     // Check if any menu is currently open
     [[nodiscard]] bool isOpen() const;
 
-    // Check if the open menu was opened from `menu`
+    // Check if the open menu was opened from `menu` (the same object, its address is compared)
     [[nodiscard]] bool isMenuOpen(const Menu& menu) const;
+
+    // Check if the open menu was opened with the owner id
+    [[nodiscard]] bool isOpenedBy(Id owner) const;
+    [[nodiscard]] bool hasOwner() const { return _owner != 0; }
 
     // Update menu state - call once per frame
     // Returns true if a menu action was triggered this frame
@@ -134,6 +138,7 @@ public:
 private:
     Menu _menu;
     const Menu* _openedFrom{nullptr};   // only used for comparing, never dereferenced
+    Id _owner{0};                       // given to open(), 0 for none
     std::vector<detail::OpenMenu> _menuChain;
     float _closeGraceTimer = 0.0f;
     int _closeGraceLevel = -1;
@@ -3272,7 +3277,7 @@ Vector3 HsvFromColor(Color col)
 
 namespace PopupMenu {
 
-void System::open(Vector2 position, const Menu& menu)
+void System::open(Vector2 position, const Menu& menu, Id owner)
 {
     close();
 
@@ -3280,6 +3285,7 @@ void System::open(Vector2 position, const Menu& menu)
 
     _menu = menu;
     _openedFrom = &menu;
+    _owner = owner;
     detail::OpenMenu root;
     root.items = &_menu;
     root.width = calculateMenuWidth(_menu);
@@ -3321,6 +3327,11 @@ bool System::isOpen() const
 bool System::isMenuOpen(const Menu& menu) const
 {
     return !_menuChain.empty() && _openedFrom == &menu;
+}
+
+bool System::isOpenedBy(Id owner) const
+{
+    return !_menuChain.empty() && owner != 0 && _owner == owner;
 }
 
 bool System::update(float dt)
@@ -3761,13 +3772,18 @@ void System::drawItem(Item const& item, Rectangle bounds, bool hovered) const {
 
 void Open(Vector2 position, const Menu& menu)
 {
+    Open(position, menu, 0);
+}
+
+void Open(Vector2 position, const Menu& menu, Id owner)
+{
     if (!g_contextStack.empty()) {
         const auto& root = g_contextStack.front();
         const auto& ctx = g_contextStack.back();
         position.x += (root.mouseOffset.x - ctx.mouseOffset.x) / GuiContext::guiScale.x;
         position.y += (root.mouseOffset.y - ctx.mouseOffset.y) / GuiContext::guiScale.y;
     }
-    GuiContext::popup.open(position, menu);
+    GuiContext::popup.open(position, menu, owner);
 }
 
 void Close()
@@ -3785,6 +3801,11 @@ bool IsMenuOpen(const Menu& menu)
     return GuiContext::popup.isMenuOpen(menu);
 }
 
+bool IsOpenedBy(Id owner)
+{
+    return GuiContext::popup.isOpenedBy(owner);
+}
+
 void SetMenuStyle(const Style& style)
 {
     GuiContext::popup.style = style;
@@ -3799,14 +3820,22 @@ const Style& GetMenuStyle()
 
 void MenuBar(const char* id, const PopupMenu::Bar& bar)
 {
-    auto& state = g_menuBarMap[GetId(id)];
+    const auto barId = GetId(id);
+    auto& state = g_menuBarMap[barId];
     state.lastUpdate = GuiContext::frameId;
     auto rect = AllocateWidget({0, 0});
     GuiStatusBar(rect, nullptr);
 
+    // The menus are identified by the bar and their index, not by their address, the application
+    // may build the bar anew in every frame. A menu of the bar opened with PopupMenu::Open() without
+    // an owner is still recognized by its address.
+    auto entryId = [barId](int index) { return detail::hashId(&index, sizeof(index), barId); };
+    auto isEntryOpen = [&](int index) {
+        return PopupMenu::IsOpenedBy(entryId(index)) || (!GuiContext::popup.hasOwner() && PopupMenu::IsMenuOpen(bar[index].menu));
+    };
     int openIndex = -1;
     for (int i = 0; i < (int)bar.size(); ++i) {
-        if (PopupMenu::IsMenuOpen(bar[i].menu))
+        if (isEntryOpen(i))
             openIndex = i;
     }
     // While a menu is open the popup menu system locks the gui, the bar still has to react then. A click on
@@ -3826,13 +3855,13 @@ void MenuBar(const char* id, const PopupMenu::Bar& bar)
                 if (state.openAtFrameStart == i)
                     PopupMenu::Close();
                 else
-                    PopupMenu::Open(menuPos, entry.menu);
+                    PopupMenu::Open(menuPos, entry.menu, entryId(i));
             }
             else if (openIndex >= 0 && openIndex != i) {
-                PopupMenu::Open(menuPos, entry.menu);
+                PopupMenu::Open(menuPos, entry.menu, entryId(i));
             }
         }
-        bool highlighted = PopupMenu::IsMenuOpen(entry.menu) || (hovered && openIndex < 0);
+        bool highlighted = isEntryOpen(i) || (hovered && openIndex < 0);
         int textColor = GuiGetState() == STATE_DISABLED ? TEXT_COLOR_DISABLED : (highlighted ? TEXT_COLOR_FOCUSED : TEXT_COLOR_NORMAL);
         if (highlighted)
             GuiDrawRectangle(titleRect, 0, BLANK, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_FOCUSED)));
@@ -3840,7 +3869,7 @@ void MenuBar(const char* id, const PopupMenu::Bar& bar)
     }
     state.openAtFrameStart = -1;
     for (int i = 0; i < (int)bar.size(); ++i) {
-        if (PopupMenu::IsMenuOpen(bar[i].menu))
+        if (isEntryOpen(i))
             state.openAtFrameStart = i;
     }
 }

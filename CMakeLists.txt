@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(rlguipp VERSION 0.1.0 LANGUAGES C CXX)
+project(rlguipp VERSION 0.5.0 LANGUAGES C CXX)
 
 # rlguipp - an immediate-mode layout wrapper around raygui, see README.md
 #

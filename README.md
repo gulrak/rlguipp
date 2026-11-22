@@ -61,14 +61,10 @@ The library uses the forwarding header `ghc/fs_fwd.hpp`, so exactly one source o
 
 ```cmake
 include(FetchContent)
-FetchContent_Declare(rlguipp URL "https://github.com/gulrak/rlguipp/archive/refs/tags/v0.1.0.tar.gz")
+FetchContent_Declare(rlguipp URL "https://github.com/gulrak/rlguipp/archive/refs/tags/v0.5.0.tar.gz")
 FetchContent_MakeAvailable(rlguipp)
 target_link_libraries(myapp PRIVATE rlguipp::rlguipp)
 ```
-
-Until the repository exists, `-DFETCHCONTENT_SOURCE_DIR_RLGUIPP=<path to this folder>` makes FetchContent use a local copy.
-
-rlguipp is also vendored in Cadmium (`external/rlguipp`), there the files of `rlguipp/`, `examples/`, `test/` and `tools/` live in one folder with Cadmium's own CMakeLists.txt. Keep the sources of both in sync.
 
 ---
 
@@ -548,7 +544,8 @@ if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && !gui::PopupMenu::IsOpen())
     gui::PopupMenu::Open(GetMousePosition(), contextMenu);
 ```
 
-- `Open()` copies the menu, so it may be changed or destroyed while it is open, even from inside one of its actions. `IsMenuOpen(menu)` tells if the open menu was opened from `menu`.
+- `Open()` copies the menu, so it may be changed or destroyed while it is open, even from inside one of its actions. `IsMenuOpen(menu)` tells if the open menu was opened from `menu`, it compares the address of `menu`, so it only works for a menu object that lives on.
+- For menus built anew in every frame, give them an id: `Open(position, menu, owner)` and `IsOpenedBy(owner)` identify the menu by the owner id (e.g. `GetId("context")`) instead of its address.
 - The position is in the coordinates of the current container, like `GetMousePosition()`; inside a popup or window it is moved to where the menu is drawn.
 - The menu is updated in `BeginGui()` and drawn in `EndGui()`; while it is open, the rest of the GUI is locked.
 - `SetMenuStyle()`/`GetMenuStyle()` change sizes and the shadow; font size and item height follow the raygui `TEXT_SIZE` unless set in the style.
@@ -568,6 +565,7 @@ gui::MenuBar("menubar", menuBar);
 ```
 
 - The bar takes the remaining width and the row height at the current layout position, so it can also share a row with other widgets in `BeginColumns()`.
+- The bar may be built anew in every frame (e.g. to enable items or to change labels like "Undo Paint"), it identifies its menus by its id and their index. The items of an open menu are the ones of the frame it was opened in.
 - Clicking a title opens its menu below it, clicking it again closes it. While one of its menus is open, hovering another title switches to that menu.
 - The bar is drawn inside the window, there is no native (e.g. macOS) menu bar.
 - The shortcut texts of items are only shown, the application has to handle the keys itself. `ShortcutText(key, modifiers)` writes them like the platform does: `ShortcutText("G", SHORTCUT_SYS | SHORTCUT_SHIFT)` is "⇧⌘G" on macOS (and in the web build on a Mac, see `IsMacLike()`) and "Ctrl+Shift+G" elsewhere. The default font has the symbols ⌃ ⌥ ⇧ ⌘ and the arrows. `SetMacLike(true/false)` overrides the platform detection, for the shortcut texts and the system key (Cmd or Ctrl).
